@@ -14,17 +14,25 @@ type Client interface {
 
 var globalClient Client
 
-func Init(option Options) (err error) {
-	globalClient, err = NewClient(option)
-	return err
+func Init(option Options) (Client, error) {
+	c, err := NewClient(option)
+	if err != nil {
+		return nil, err
+	}
+	globalClient = c
+	return c, err
 }
 
-func InitFast(url string) (err error) {
-	globalClient, err = Dial(url)
-	return err
+func InitFast(url string) (Client, error) {
+	c, err := Dial(url)
+	if err != nil {
+		return nil, err
+	}
+	globalClient = c
+	return c, err
 }
 
-func defaultClient() Client {
+func getGlobalClient() Client {
 	return globalClient
 }
 
