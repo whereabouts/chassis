@@ -138,14 +138,42 @@ func (db *MongoDB) ReplaceAll(selector, update interface{}) (changeInfo *mgo.Cha
 	return changeInfo, err
 }
 
-func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}) error {
+func (db *MongoDB) handleDocRet(doc bson.M, ret interface{}) interface{} {
+
+	return nil
+}
+
+func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}, deletion ...bool) error {
 	if ret == nil {
 		ret = NullRet
 	}
-	return db.Do(func(c *mgo.Collection) error {
-		//c.Update(selector, bson.M{"$set": })
-		return nil
+	err := db.Do(func(c *mgo.Collection) error {
+		setting := "$unset"
+		if len(deletion) == 0 || !deletion[0] {
+			setting = "$set"
+		}
+		return c.Update(selector, bson.M{setting: doc})
 	})
+	if err != nil {
+		return err
+	}
+	return db.FindOne(selector, nil, ret)
+}
+
+func (db *MongoDB) ModifyId(id string, doc bson.M, ret interface{}, deletion ...bool) error {
+	return db.Modify(bson.M{"_id": id}, doc, ret, deletion...)
+}
+
+func (db *MongoDB) ModifyAll(selector, doc bson.M, deletion ...bool) (changeInfo *mgo.ChangeInfo, err error) {
+	err = db.Do(func(c *mgo.Collection) error {
+		setting := "$unset"
+		if len(deletion) == 0 || !deletion[0] {
+			setting = "$set"
+		}
+		changeInfo, err = c.UpdateAll(selector, bson.M{setting: doc})
+		return err
+	})
+	return changeInfo, err
 }
 
 //func (db *MongoDB) Upsert(selector, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
@@ -155,7 +183,7 @@ func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}) error {
 //	})
 //	return changeInfo, err
 //}
-//
+
 //func (db *MongoDB) UpsertId(id, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
 //	err = db.Do(func(c *mgo.Collection) error {
 //		changeInfo, err = c.UpsertId(id, update)
@@ -256,20 +284,20 @@ func (db *MongoDB) PipeAll(selector interface{}, ret interface{}) error {
 
 // Distinct unmarshals into result the list of distinct values for the given key.
 //
-// 	   For example:
-//	   	    ret, err = db.Distinct(bson.M{"gender": 1}, "age")
-//     		fmt.Println(ret)
+// For example:
+// 		ret, err = db.Distinct(bson.M{"gender": 1}, "age")
+// 		fmt.Println(ret)
 //
-//     DB:
-//    		{ ObjectId("603a081694ea2e906792a8f1"), name:"a", gender:"1", age:12 }
-//    		{ ObjectId("603a081694ea2e906792a8f2"), name:"b", gender:"1", age:13 }
-//    		{ ObjectId("603a081694ea2e906792a8f3"), name:"c", gender:"1", age:14 }
-//    		{ ObjectId("603a081694ea2e906792a8f4"), name:"d", gender:"1", age:15 }
-//    		{ ObjectId("603a081694ea2e906792a8f5"), name:"e", gender:"1", age:14 }
-//    		{ ObjectId("603a081694ea2e906792a8f6"), name:"f", gender:"1", age:13 }
+// DB:
+// 		{ ObjectId("603a081694ea2e906792a8f1"), name:"a", gender:"1", age:12 }
+// 		{ ObjectId("603a081694ea2e906792a8f2"), name:"b", gender:"1", age:13 }
+// 		{ ObjectId("603a081694ea2e906792a8f3"), name:"c", gender:"1", age:14 }
+// 		{ ObjectId("603a081694ea2e906792a8f4"), name:"d", gender:"1", age:15 }
+// 		{ ObjectId("603a081694ea2e906792a8f5"), name:"e", gender:"1", age:14 }
+//  	{ ObjectId("603a081694ea2e906792a8f6"), name:"f", gender:"1", age:13 }
 //
-//	   Console:
-//	  	    [12, 13, 14 ,15]
+// Console:
+// 		[12, 13, 14 ,15]
 //
 func (db *MongoDB) Distinct(selector interface{}, key string) ([]interface{}, error) {
 	ret := make([]interface{}, 0)
