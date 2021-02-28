@@ -1,12 +1,13 @@
 package test_user
 
 import (
+	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/whereabouts/chassis/model/mgo"
+	"github.com/whereabouts/chassis/model/mongo"
 )
 
 var (
-	userDB = &UserDB{mgo.New("test", "user", User{})}
+	userDB = &UserDB{mongo.New("test", "user", User{})}
 )
 
 func GetUserDB() *UserDB {
@@ -14,7 +15,7 @@ func GetUserDB() *UserDB {
 }
 
 type UserDB struct {
-	*mgo.MongoDB
+	*mongo.MongoDB
 }
 
 type User struct {
@@ -48,6 +49,10 @@ func (user *UserDB) GetAll() ([]*User, error) {
 		return nil, err
 	}
 	return ret, err
+}
+
+func (user *UserDB) Exec(exec func(c *mgo.Collection) error) error {
+	return user.Do(exec)
 }
 
 //func (user *UserDB) ModifyAgeByName(name string, age int) error {

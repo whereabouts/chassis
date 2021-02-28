@@ -1,4 +1,4 @@
-package mgo
+package mongo
 
 import (
 	"github.com/globalsign/mgo"
@@ -8,6 +8,10 @@ import (
 const (
 	defaultPoolLimit   = 50
 	defaultMaxIdleTime = time.Duration(20) * time.Minute
+)
+
+var (
+	NullRet = &struct{}{}
 )
 
 type Options struct {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/whereabouts/chassis/logger"
-	"github.com/whereabouts/chassis/model/mgo"
-	"github.com/whereabouts/chassis/model/mgo/test_user"
+	"github.com/whereabouts/chassis/model/mongo"
+	"github.com/whereabouts/chassis/model/mongo/test_user"
 )
 
 func main() {
@@ -26,7 +28,7 @@ func main() {
 	//if err != nil {
 	//	log.Println(err)
 	//}
-	client, err := mgo.Init(mgo.Options{
+	client, err := mongo.Init(mongo.Options{
 		Addrs:          []string{"127.0.0.1:27017"},
 		Database:       "test",
 		Username:       "root",
@@ -41,11 +43,17 @@ func main() {
 	if err != nil {
 		logger.Fatalln(err)
 	}
-	u, err := test_user.GetUserDB().GetByName("hezebin2")
+	//u := &test_user.User{
+	//	Id: bson.NewObjectId(),
+	//	Name: "hezebin2",
+	//	Age: 100,
+	//}
+	err = test_user.GetUserDB().Do(func(c *mgo.Collection) error {
+		return c.Update(bson.M{"name": "hezebin2"}, bson.M{"$set": bson.M{"age": 100}})
+	})
 	if err != nil {
 		fmt.Println("err: ", err)
 	}
-	fmt.Println(u)
 	//user1 := test_user.User{Name: "hezebin1", Age: 21}
 	//user2 := test_user.User{Name: "hezebin2", Age: 22}
 	//user3 := test_user.User{Name: "hezebin3", Age: 23}
