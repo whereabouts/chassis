@@ -10,6 +10,7 @@ type Client interface {
 	GetSession() *mgo.Session
 	Close()
 	Do(model Model, exec func(s *mgo.Collection) error) error
+	GetConfig() Options
 }
 
 var globalClient Client
@@ -82,6 +83,7 @@ func NewClient(option Options) (Client, error) {
 
 type client struct {
 	session *mgo.Session
+	config  Options
 }
 
 func (c *client) GetSession() *mgo.Session {
@@ -96,4 +98,8 @@ func (c *client) Do(model Model, exec func(s *mgo.Collection) error) error {
 	s := c.GetSession()
 	defer s.Close()
 	return exec(s.DB(model.Database()).C(model.Collection()))
+}
+
+func (c *client) GetConfig() Options {
+	return c.config
 }

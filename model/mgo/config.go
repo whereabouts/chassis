@@ -22,6 +22,8 @@ type Options struct {
 	PoolLimit      int           `json:"pool_limit"`
 	MaxIdleTime    time.Duration `json:"max_idle_time"`
 	AppName        string        `json:"app_name"`
+	InsertTimeAuto bool          `json:"insert_time_auto"`
+	UpdateTimeAuto bool          `json:"update_time_auto"`
 }
 
 type Model interface {

@@ -18,8 +18,9 @@ type UserDB struct {
 }
 
 type User struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
+	Id   bson.ObjectId `json:"id" bson:"_id"`
+	Name string        `json:"name"`
+	Age  int           `json:"age"`
 }
 
 func (user *UserDB) Add(users ...interface{}) error {
@@ -49,10 +50,10 @@ func (user *UserDB) GetAll() ([]*User, error) {
 	return ret, err
 }
 
-func (user *UserDB) ModifyAgeByName(name string, age int) error {
-	selector := bson.M{"name": name}
-	return user.Update(selector, User{Name: name, Age: age})
-}
+//func (user *UserDB) ModifyAgeByName(name string, age int) error {
+//	selector := bson.M{"name": name}
+//	return user.Update(selector, User{Name: name, Age: age})
+//}
 
 func (user *UserDB) DeleteByAge(age int) error {
 	selector := bson.M{"age": age}

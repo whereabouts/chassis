@@ -1,6 +1,8 @@
 package mgo
 
 import (
+	"errors"
+	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/whereabouts/utils/mapper"
@@ -31,6 +33,8 @@ func (db *MongoDB) client() Client {
 	return getGlobalClient()
 }
 
+// Do it is used for you to use the native mgo interface according to your own needs,
+// Use when you can't find the method you want in this package
 func (db *MongoDB) Do(f func(c *mgo.Collection) error) error {
 	return db.client().Do(db, f)
 }
@@ -55,116 +59,100 @@ func (db *MongoDB) RemoveAll(selector interface{}) (changeInfo *mgo.ChangeInfo, 
 	return changeInfo, err
 }
 
+func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]interface{}, error) {
+	v := reflect.ValueOf(doc)
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	now := timer.Format(time.Now())
+	if v.Kind() == reflect.Struct {
+		m, err := mapper.Struct2Map(v.Interface())
+		if err != nil {
+			return nil, err
+		}
+		v = reflect.ValueOf(m)
+	}
+	if v.Kind() != reflect.Map {
+		return nil, errors.New(fmt.Sprintf("the doc %+v is not a map or struct", v.Interface()))
+	}
+	if db.client().GetConfig().UpdateTimeAuto && !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
+		v.SetMapIndex(reflect.ValueOf("update_time"), reflect.ValueOf(now))
+	}
+	if db.client().GetConfig().InsertTimeAuto && !v.MapIndex(reflect.ValueOf("create_time")).IsValid() && isInsert {
+		v.SetMapIndex(reflect.ValueOf("create_time"), reflect.ValueOf(now))
+	}
+	return v.Interface().(map[string]interface{}), nil
+}
+
 func (db *MongoDB) Insert(doc ...interface{}) error {
 	return db.Do(func(c *mgo.Collection) error {
 		out := make([]interface{}, 0, len(doc))
 		for _, in := range doc {
-			v := reflect.ValueOf(in)
-			for v.Kind() == reflect.Ptr {
-				v = v.Elem()
+			v, err := db.handleTimeAuto(in, true)
+			if err != nil {
+				return err
 			}
-			now := time.Now()
-			if v.Kind() == reflect.Struct {
-				m, err := mapper.Struct2Map(in)
-				if err != nil {
-					return err
-				}
-				if !mapper.IsKeyTimeValid(m, "update_time") {
-					m["update_time"] = timer.Format(now)
-				}
-				if !mapper.IsKeyTimeValid(m, "create_time") {
-					m["create_time"] = timer.Format(now)
-				}
-				out = append(out, m)
-			} else if v.Kind() == reflect.Map {
-				if !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
-					v.SetMapIndex(reflect.ValueOf("update_time"), reflect.ValueOf(timer.Format(now)))
-				}
-				if !v.MapIndex(reflect.ValueOf("create_time")).IsValid() {
-					v.SetMapIndex(reflect.ValueOf("create_time"), reflect.ValueOf(timer.Format(now)))
-				}
-				out = append(out, v.Interface())
-			}
+			out = append(out, v)
 		}
 		return c.Insert(out...)
 	})
 }
 
-func (db *MongoDB) Upsert(selector, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
+// Replace replace the original document as a whole,
+// but the value of create_time is the value of the old document
+func (db *MongoDB) Replace(selector, update interface{}) error {
+	return db.Do(func(c *mgo.Collection) error {
+		newDoc, err := db.handleTimeAuto(update, true)
+		if err != nil {
+			return err
+		}
+		oldDoc := make(map[string]interface{})
+		db.FindOne(selector, nil, &oldDoc)
+		if createTime, ok := oldDoc["create_time"]; ok {
+			newDoc["create_time"] = createTime
+		}
+		err = c.Update(selector, newDoc)
+		return err
+	})
+}
+
+func (db *MongoDB) ReplaceId(id, update interface{}) (err error) {
+	return db.Replace(bson.D{{Name: "_id", Value: id}}, update)
+}
+
+func (db *MongoDB) ReplaceAll(selector, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
 	err = db.Do(func(c *mgo.Collection) error {
-		changeInfo, err = c.Upsert(selector, update)
+		var newDoc map[string]interface{}
+		newDoc, err = db.handleTimeAuto(update, true)
+		if err != nil {
+			return err
+		}
+		oldDoc := make(map[string]interface{})
+		db.FindOne(selector, nil, &oldDoc)
+		if createTime, ok := oldDoc["create_time"]; ok {
+			newDoc["create_time"] = createTime
+		}
+		changeInfo, err = c.UpdateAll(selector, newDoc)
 		return err
 	})
 	return changeInfo, err
 }
 
-func (db *MongoDB) upsertId(id, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
-	err = db.Do(func(c *mgo.Collection) error {
-		changeInfo, err = c.UpsertId(id, update)
-		return err
-	})
-	return changeInfo, err
-}
-
-func (db *MongoDB) UpdateAll(selector, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
-	err = db.Do(func(c *mgo.Collection) error {
-		v := reflect.ValueOf(update)
-		for v.Kind() == reflect.Ptr {
-			v = v.Elem()
-		}
-		now := time.Now()
-		if v.Kind() == reflect.Struct {
-			m := make(map[string]interface{})
-			m, err = mapper.Struct2Map(update)
-			if err != nil {
-				return err
-			}
-			m["update_time"] = timer.Format(now)
-			changeInfo, err = c.UpdateAll(selector, m)
-		} else if v.Kind() == reflect.Map {
-			v.SetMapIndex(reflect.ValueOf("update_time"), reflect.ValueOf(timer.Format(now)))
-			changeInfo, err = c.UpdateAll(selector, v.Interface())
-		}
-		changeInfo, err = c.UpdateAll(selector, update)
-		return err
-	})
-	return changeInfo, err
-}
-
-func (db *MongoDB) Update(selector, update interface{}) error {
-	return db.Do(func(c *mgo.Collection) (err error) {
-		v := reflect.ValueOf(update)
-		for v.Kind() == reflect.Ptr {
-			v = v.Elem()
-		}
-		now := time.Now()
-		if v.Kind() == reflect.Struct {
-			m := make(map[string]interface{})
-			m, err = mapper.Struct2Map(update)
-			if err != nil {
-				return err
-			}
-			if !mapper.IsKeyTimeValid(m, "update_time") {
-				m["update_time"] = timer.Format(now)
-			}
-			err = c.Update(selector, m)
-		} else if v.Kind() == reflect.Map {
-			if !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
-				v.SetMapIndex(reflect.ValueOf("update_time"), reflect.ValueOf(timer.Format(now)))
-			}
-			err = c.Update(selector, v.Interface())
-		}
-		return err
-	})
-}
-
-func (db *MongoDB) UpdateId(id, update interface{}) (err error) {
-	err = db.Do(func(c *mgo.Collection) error {
-		err = c.UpdateId(id, update)
-		return err
-	})
-	return err
-}
+//func (db *MongoDB) Upsert(selector, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
+//	err = db.Do(func(c *mgo.Collection) error {
+//		changeInfo, err = c.Upsert(selector, update)
+//		return err
+//	})
+//	return changeInfo, err
+//}
+//
+//func (db *MongoDB) UpsertId(id, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
+//	err = db.Do(func(c *mgo.Collection) error {
+//		changeInfo, err = c.UpsertId(id, update)
+//		return err
+//	})
+//	return changeInfo, err
+//}
 
 func (db *MongoDB) FindId(id interface{}, picker interface{}, ret interface{}) error {
 	return db.Do(func(c *mgo.Collection) error {
