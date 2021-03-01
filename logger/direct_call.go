@@ -2,8 +2,8 @@ package logger
 
 import (
 	"context"
-	"gitee.com/whereabouts/chassis/logger/hooks"
 	"github.com/sirupsen/logrus"
+	"github.com/whereabouts/chassis/logger/hooks"
 	"io"
 	"time"
 )
