@@ -14,7 +14,7 @@ var (
 	NullRet = &struct{}{}
 )
 
-type Options struct {
+type Config struct {
 	Addrs          []string      `json:"addrs"`
 	Database       string        `json:"database"`
 	Username       string        `json:"username"`

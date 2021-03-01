@@ -92,6 +92,7 @@ func (db *MongoDB) Insert(doc ...interface{}) error {
 			if err != nil {
 				return err
 			}
+			delete(v, "_id")
 			out = append(out, v)
 		}
 		return c.Insert(out...)
@@ -106,8 +107,12 @@ func (db *MongoDB) Replace(selector, update interface{}) error {
 		if err != nil {
 			return err
 		}
+		delete(newDoc, "_id")
 		oldDoc := make(map[string]interface{})
-		db.FindOne(selector, nil, &oldDoc)
+		err = db.FindOne(selector, nil, &oldDoc)
+		if err != nil {
+			return errors.New(fmt.Sprintf("do not find the old doc by this selector %+v", err))
+		}
 		if createTime, ok := oldDoc["create_time"]; ok {
 			newDoc["create_time"] = createTime
 		}
@@ -117,7 +122,7 @@ func (db *MongoDB) Replace(selector, update interface{}) error {
 }
 
 func (db *MongoDB) ReplaceId(id, update interface{}) error {
-	return db.Replace(bson.D{{Name: "_id", Value: id}}, update)
+	return db.Replace(bson.M{"_id": id}, update)
 }
 
 func (db *MongoDB) ReplaceAll(selector, update interface{}) (changeInfo *mgo.ChangeInfo, err error) {
@@ -128,7 +133,10 @@ func (db *MongoDB) ReplaceAll(selector, update interface{}) (changeInfo *mgo.Cha
 			return err
 		}
 		oldDoc := make(map[string]interface{})
-		db.FindOne(selector, nil, &oldDoc)
+		err = db.FindOne(selector, nil, &oldDoc)
+		if err != nil {
+			return errors.New(fmt.Sprintf("do not find old doc by this selector %+v", err))
+		}
 		if createTime, ok := oldDoc["create_time"]; ok {
 			newDoc["create_time"] = createTime
 		}
@@ -138,9 +146,8 @@ func (db *MongoDB) ReplaceAll(selector, update interface{}) (changeInfo *mgo.Cha
 	return changeInfo, err
 }
 
-func (db *MongoDB) handleDocRet(doc bson.M, ret interface{}) interface{} {
-
-	return nil
+func bsonM2Map(b bson.M) map[string]interface{} {
+	return b
 }
 
 func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}, deletion ...bool) error {
@@ -152,7 +159,11 @@ func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}, deletion ...boo
 		if len(deletion) == 0 || !deletion[0] {
 			setting = "$set"
 		}
-		return c.Update(selector, bson.M{setting: doc})
+		v, err := db.handleTimeAuto(bsonM2Map(doc), false)
+		if err != nil {
+			return err
+		}
+		return c.Update(selector, bson.M{setting: v})
 	})
 	if err != nil {
 		return err
@@ -160,7 +171,7 @@ func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}, deletion ...boo
 	return db.FindOne(selector, nil, ret)
 }
 
-func (db *MongoDB) ModifyId(id string, doc bson.M, ret interface{}, deletion ...bool) error {
+func (db *MongoDB) ModifyId(id interface{}, doc bson.M, ret interface{}, deletion ...bool) error {
 	return db.Modify(bson.M{"_id": id}, doc, ret, deletion...)
 }
 

@@ -1,7 +1,6 @@
 package test_user
 
 import (
-	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/whereabouts/chassis/model/mongo"
 )
@@ -51,16 +50,17 @@ func (user *UserDB) GetAll() ([]*User, error) {
 	return ret, err
 }
 
-func (user *UserDB) Exec(exec func(c *mgo.Collection) error) error {
-	return user.Do(exec)
+func (user *UserDB) ModifyAgeByName(name string, age int) error {
+	u := &User{}
+	selector := bson.M{"name": name}
+	return user.Modify(selector, bson.M{"age": age}, u)
 }
-
-//func (user *UserDB) ModifyAgeByName(name string, age int) error {
-//	selector := bson.M{"name": name}
-//	return user.Update(selector, User{Name: name, Age: age})
-//}
 
 func (user *UserDB) DeleteByAge(age int) error {
 	selector := bson.M{"age": age}
 	return user.Remove(selector)
+}
+
+func (user *UserDB) ReplaceByName(name string, u User) error {
+	return user.Replace(bson.M{"name": name}, u)
 }
