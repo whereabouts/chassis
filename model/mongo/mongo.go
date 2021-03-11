@@ -215,7 +215,7 @@ func (db *MongoDB) handlePicker(picker []string) interface{} {
 func (db *MongoDB) FindOne(selector interface{}, picker []string, ret interface{}) error {
 	return db.Do(func(c *mgo.Collection) error {
 		query := c.Find(selector)
-		if selector != nil {
+		if picker != nil {
 			query = query.Select(db.handlePicker(picker))
 		}
 		err := query.One(ret)
@@ -252,7 +252,7 @@ func (db *MongoDB) FindOneWithSort(selector interface{}, sort []string, picker [
 		if sort != nil {
 			query = query.Sort(sort...)
 		}
-		if selector != nil {
+		if picker != nil {
 			query = query.Select(db.handlePicker(picker))
 		}
 		err := query.One(ret)
@@ -271,7 +271,7 @@ func (db *MongoDB) Count(selector interface{}) (count int, err error) {
 func (db *MongoDB) FindAll(selector interface{}, sort []string, picker []string, skip int, limit int, ret interface{}) error {
 	return db.Do(func(c *mgo.Collection) error {
 		query := c.Find(selector)
-		if selector != nil {
+		if picker != nil {
 			query = query.Select(db.handlePicker(picker))
 		}
 		if sort != nil {
