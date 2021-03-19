@@ -29,14 +29,14 @@ func (db *MongoDB) Collection() string {
 	return db.collection
 }
 
-func (db *MongoDB) client() Client {
+func (db *MongoDB) Client() Client {
 	return getGlobalClient()
 }
 
 // Do it is used for you to use the native mgo interface according to your own needs,
 // Use when you can't find the method you want in this package
 func (db *MongoDB) Do(f func(c *mgo.Collection) error) error {
-	return db.client().Do(db, f)
+	return db.Client().Do(db, f)
 }
 
 func (db *MongoDB) Remove(selector interface{}) error {
@@ -75,10 +75,10 @@ func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]in
 	if v.Kind() != reflect.Map {
 		return nil, errors.New(fmt.Sprintf("the doc %+v is not a map or struct", v.Interface()))
 	}
-	if db.client().GetConfig().UpdateTimeAuto && !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
+	if db.Client().GetConfig().UpdateTimeAuto && !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
 		v.SetMapIndex(reflect.ValueOf("update_time"), reflect.ValueOf(now))
 	}
-	if db.client().GetConfig().InsertTimeAuto && !v.MapIndex(reflect.ValueOf("create_time")).IsValid() && isInsert {
+	if db.Client().GetConfig().InsertTimeAuto && !v.MapIndex(reflect.ValueOf("create_time")).IsValid() && isInsert {
 		v.SetMapIndex(reflect.ValueOf("create_time"), reflect.ValueOf(now))
 	}
 	return v.Interface().(map[string]interface{}), nil

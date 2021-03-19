@@ -31,3 +31,7 @@ type Config struct {
 	ClientName string
 	Database   int
 }
+
+//type Model interface {
+//	ModelName() string
+//}

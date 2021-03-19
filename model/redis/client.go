@@ -7,7 +7,7 @@ import (
 type Client interface {
 	GetConn() (conn redis.Conn)
 	Close()
-	Do(cmd string, args ...interface{}) (reply interface{}, err error)
+	Do(cmd string, args ...interface{}) Result
 }
 
 var globalClient Client
@@ -40,7 +40,7 @@ func NewClient(config Config) (Client, error) {
 		dialOption = append(dialOption, redis.DialDatabase(config.Database))
 	}
 	var err error
-	return &client{
+	c := &client{
 		config: config,
 		pool: &redis.Pool{
 			MaxIdle:     config.MaxIdle,
@@ -52,7 +52,9 @@ func NewClient(config Config) (Client, error) {
 				return conn, er
 			},
 		},
-	}, err
+	}
+	globalClient = c
+	return c, err
 }
 
 type client struct {
@@ -68,8 +70,9 @@ func (c *client) Close() {
 	c.pool.Close()
 }
 
-func (c *client) Do(cmd string, args ...interface{}) (reply interface{}, err error) {
+func (c *client) Do(cmd string, args ...interface{}) Result {
 	conn := c.GetConn()
 	defer conn.Close()
-	return conn.Do(cmd, args...)
+	reply, err := conn.Do(cmd, args...)
+	return Result{reply, err}
 }

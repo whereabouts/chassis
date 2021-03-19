@@ -103,8 +103,9 @@ func NewClient(config Config) (Client, error) {
 		config.Mode = mgo.PrimaryPreferred
 	}
 	session.SetMode(config.Mode, true)
-
-	return &client{session: session, config: config}, nil
+	c := &client{session: session, config: config}
+	globalClient = c
+	return c, nil
 }
 
 type client struct {
