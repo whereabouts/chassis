@@ -1,4 +1,4 @@
-package test_user
+package test
 
 import (
 	"github.com/globalsign/mgo/bson"
