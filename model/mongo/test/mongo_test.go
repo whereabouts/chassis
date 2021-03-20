@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func MongoTest(t *testing.T) {
+func TestMongo(t *testing.T) {
 	client, err := mongo.Init(mongo.Config{
 		Addrs:          []string{"127.0.0.1:27017"},
 		Database:       "test",
