@@ -7,6 +7,14 @@ type Result struct {
 	err   error
 }
 
+func (result Result) Reply() interface{} {
+	return result.reply
+}
+
+func (result Result) Error() error {
+	return result.err
+}
+
 func (result Result) Value() (interface{}, error) {
 	return result.reply, result.err
 }
