@@ -1,6 +1,11 @@
 package redis
 
-import "github.com/gomodule/redigo/redis"
+import (
+	"errors"
+	"github.com/gomodule/redigo/redis"
+)
+
+var ErrNil = errors.New("redis returned nil")
 
 type Result struct {
 	reply interface{}
@@ -8,15 +13,20 @@ type Result struct {
 }
 
 func (result Result) Reply() interface{} {
-	return result.reply
+	value, _ := result.Value()
+	return value
 }
 
 func (result Result) Error() error {
-	return result.err
+	_, err := result.Value()
+	return err
 }
 
 func (result Result) Value() (interface{}, error) {
-	return result.reply, result.err
+	if result.reply == nil {
+		return nil, ErrNil
+	}
+	return result.reply, nil
 }
 
 func (result Result) Int() (int, error) {
