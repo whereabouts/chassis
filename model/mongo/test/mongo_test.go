@@ -28,12 +28,12 @@ func TestMongo(t *testing.T) {
 	user2 := User{Name: "hezebin2", Age: 22}
 	user3 := User{Name: "hezebin3", Age: 23}
 	user4 := User{Name: "hezebin4", Age: 24}
-	err = GetUserDB().Add(user1, user2, user3, user4)
+	err = GetUserDB().Add(user1, user2, user3, user4, nil)
 	if err != nil {
 		logger.Errorln(err)
 		return
 	}
-	err = GetUserDB().DeleteByAge(24)
+	err = GetUserDB().DeleteTest(24)
 	if err != nil {
 		logger.Errorln(err)
 		return

@@ -61,7 +61,7 @@ func (db *MongoDB) RemoveAll(selector interface{}) (changeInfo *mgo.ChangeInfo, 
 
 func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]interface{}, error) {
 	if doc == nil {
-		return NullMap, nil
+		return nil, nil
 	}
 	v := reflect.ValueOf(doc)
 	for v.Kind() == reflect.Ptr {
@@ -77,6 +77,9 @@ func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]in
 	}
 	if v.Kind() != reflect.Map {
 		return nil, errors.New(fmt.Sprintf("the doc %+v is not a map or struct", v.Interface()))
+	}
+	if len(v.Interface().(map[string]interface{})) == 0 {
+		return nil, nil
 	}
 	if db.Client().GetConfig().UpdateTimeAuto && !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
 		v.SetMapIndex(reflect.ValueOf("update_time"), reflect.ValueOf(now))
@@ -149,11 +152,10 @@ func (db *MongoDB) ReplaceAll(selector, update interface{}) (changeInfo *mgo.Cha
 	return changeInfo, err
 }
 
-func bsonM2Map(b bson.M) map[string]interface{} {
-	return b
-}
-
 func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}, deletion ...bool) error {
+	if len(doc) == 0 {
+		return errors.New(fmt.Sprint("doc does not allow nil!"))
+	}
 	if ret == nil {
 		ret = NullRet
 	}

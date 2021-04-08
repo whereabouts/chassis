@@ -13,8 +13,8 @@ const (
 
 var (
 	NullRet = &struct{}{}
-	NullDoc = bson.M{}
-	NullMap = map[string]interface{}{}
+	NullDoc = make(bson.M)
+	NullMap = make(map[string]interface{})
 )
 
 type Config struct {

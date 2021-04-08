@@ -61,6 +61,11 @@ func (user *UserDB) DeleteByAge(age int) error {
 	return user.Remove(selector)
 }
 
+func (user *UserDB) DeleteTest(age int) error {
+	selector := bson.M{"age": age}
+	return user.Modify(selector, nil, nil, true)
+}
+
 func (user *UserDB) ReplaceByName(name string, u User) error {
 	return user.Replace(bson.M{"name": name}, u)
 }
