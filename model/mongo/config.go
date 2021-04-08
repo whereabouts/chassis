@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"time"
 )
 
@@ -12,6 +13,8 @@ const (
 
 var (
 	NullRet = &struct{}{}
+	NullDoc = bson.M{}
+	NullMap = map[string]interface{}{}
 )
 
 type Config struct {

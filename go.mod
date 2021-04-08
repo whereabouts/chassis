@@ -9,5 +9,5 @@ require (
 	github.com/lestrrat-go/strftime v1.0.4 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/whereabouts/utils v0.1.10
+	github.com/whereabouts/utils v0.1.19
 )

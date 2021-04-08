@@ -60,6 +60,9 @@ func (db *MongoDB) RemoveAll(selector interface{}) (changeInfo *mgo.ChangeInfo, 
 }
 
 func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]interface{}, error) {
+	if doc == nil {
+		return NullMap, nil
+	}
 	v := reflect.ValueOf(doc)
 	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -159,7 +162,7 @@ func (db *MongoDB) Modify(selector, doc bson.M, ret interface{}, deletion ...boo
 		if len(deletion) == 0 || !deletion[0] {
 			setting = "$set"
 		}
-		v, err := db.handleTimeAuto(bsonM2Map(doc), false)
+		v, err := db.handleTimeAuto(mapper.BsonM2Map(doc), false)
 		if err != nil {
 			return err
 		}
