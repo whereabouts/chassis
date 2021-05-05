@@ -78,7 +78,7 @@ func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]in
 	if v.Kind() != reflect.Map {
 		return nil, errors.New(fmt.Sprintf("the doc %+v is not a map or struct", v.Interface()))
 	}
-	if len(v.Interface().(map[string]interface{})) == 0 {
+	if len(v.MapKeys()) == 0 {
 		return nil, nil
 	}
 	if db.Client().GetConfig().UpdateTimeAuto && !v.MapIndex(reflect.ValueOf("update_time")).IsValid() {
@@ -87,7 +87,11 @@ func (db *MongoDB) handleTimeAuto(doc interface{}, isInsert bool) (map[string]in
 	if db.Client().GetConfig().InsertTimeAuto && !v.MapIndex(reflect.ValueOf("create_time")).IsValid() && isInsert {
 		v.SetMapIndex(reflect.ValueOf("create_time"), reflect.ValueOf(now))
 	}
-	return v.Interface().(map[string]interface{}), nil
+	ret := make(map[string]interface{})
+	for _, key := range v.MapKeys() {
+		ret[key.String()] = v.MapIndex(key).Interface()
+	}
+	return ret, nil
 }
 
 func (db *MongoDB) Insert(doc ...interface{}) error {
